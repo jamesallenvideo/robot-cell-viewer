@@ -1,0 +1,240 @@
+{
+  "_readme": [
+    "Content for the hotspot pop-ups and the Sections list. Safe to edit without touching any code.",
+    "Hotspots: the key (e.g. HS_FT_Sensor) matches a node name in kuka_lab.glb. If the model has no such node, a 'derive' entry places the marker from a part's bounding box (part = node name, at = 'centre' or 'top', optional offset in metres).",
+    "Edit 'title' and 'body' freely. 'labNote' shows as a highlighted line for anything the lab still has to confirm; delete the line to hide it.",
+    "'mission' links the card to a mission (m1, m2, m3); 'missionLabel' is the button text.",
+    "Sections: 'roots' are node names whose meshes belong to the section; 'exclude' stops at child nodes that belong to another section.",
+    "Keep the JSON valid: double quotes, commas between items, no comma after the last item."
+  ],
+  "hotspots": {
+    "HS_FT_Sensor": {
+      "title": "6-axis force/torque sensor",
+      "body": "Measures the three forces (Fx, Fy, Fz) and three moments (Mx, My, Mz) passed between the robot flange and the tool. In a cell like this it closes the loop for force-controlled testing, so the robot can regulate the load on the specimen rather than only its position. Readings drift and include the tool's own weight, so the sensor needs bias zeroing and gravity-load compensation before use.",
+      "labNote": "Sensor make, model and measuring range: to be confirmed by the lab.",
+      "section": "tool",
+      "mission": "m2",
+      "missionLabel": "Zero and calibrate the F/T sensor"
+    },
+    "HS_A1_Base": {
+      "title": "A1: base rotation",
+      "body": "Axis 1 turns the whole arm about the vertical axis on top of the fixed base. It is a rotary joint that sets the arm's heading around the cell. The base is bolted to the white welded steel plinth, which raises the robot to a useful working height.",
+      "labNote": "Joint limits shown in this model are illustrative, not manufacturer data.",
+      "section": "base",
+      "mission": "m3",
+      "missionLabel": "Plan and verify a dry run"
+    },
+    "HS_A2_Shoulder": {
+      "title": "A2: shoulder",
+      "body": "Axis 2 swings the link arm forwards and backwards about a horizontal axis. It carries the largest gravity loads of any joint, so heavy-payload arms of this class normally include a counterbalancing system on this axis (not modelled here).",
+      "section": "A2",
+      "mission": "m3",
+      "missionLabel": "Plan and verify a dry run"
+    },
+    "HS_A3_Elbow": {
+      "title": "A3: elbow",
+      "body": "Axis 3 rotates the arm housing about a second horizontal axis, parallel to A2. Together, A2 and A3 set the reach and height of the wrist. On arms of this type the motors for the wrist axes (A4 to A6) usually sit at the rear of this housing, which also acts as a counterweight.",
+      "section": "A3",
+      "mission": "m3",
+      "missionLabel": "Plan and verify a dry run"
+    },
+    "HS_A4_Forearm": {
+      "title": "A4: forearm roll",
+      "body": "Axis 4 rotates the forearm about its own long axis (a roll motion). Combined with A5 and A6 it lets the wrist reach any tool orientation independently of where the arm places the wrist centre.",
+      "section": "A4",
+      "mission": "m3",
+      "missionLabel": "Plan and verify a dry run"
+    },
+    "HS_A5_Wrist": {
+      "title": "A5: wrist bend",
+      "body": "Axis 5 bends the wrist about an axis at right angles to the forearm, tilting the tool. In this cell's home pose A5 is set so that the tool points straight down at the fixture.",
+      "section": "A5",
+      "mission": "m3",
+      "missionLabel": "Plan and verify a dry run (singularities)"
+    },
+    "HS_A6_Flange": {
+      "title": "A6: flange roll",
+      "body": "Axis 6 rotates the mounting flange about the tool axis. Tools attach to the flange through a standardised bolt pattern (commonly the ISO 9409-1 mechanical interface), here via an adapter plate.",
+      "section": "A6",
+      "mission": "m2",
+      "missionLabel": "Zero and calibrate the F/T sensor"
+    },
+    "HS_Adapter_Plate": {
+      "title": "Adapter plate",
+      "body": "A machined plate that joins the robot's flange bolt pattern to the sensor's mounting face, and fixes the sensor's angular orientation with a dowel pin. If the sensor is mounted at a different angle than the software assumes, every force and moment is reported in the wrong direction.",
+      "labNote": "No HS_Adapter_Plate node in the model: this marker is placed from the part's bounding box.",
+      "section": "tool",
+      "derive": {
+        "part": "Adapter_Plate",
+        "at": "centre",
+        "offset": [
+          0.09,
+          0,
+          0
+        ]
+      },
+      "mission": "m1",
+      "missionLabel": "Commission the cell (mounting rotation)"
+    },
+    "HS_Energy_Hose": {
+      "title": "Energy supply hose",
+      "body": "A corrugated conduit that carries and protects the power, signal and data lines to the tool and sensor. The corrugations let it bend as the arm moves without kinking, and the routing keeps it clear of the arm and the specimen. In this model it is simplified as a rigid hose on the forearm.",
+      "section": "hose",
+      "mission": "m3",
+      "missionLabel": "Plan and verify a dry run"
+    },
+    "HS_Gripper": {
+      "title": "Gripper / clamping block",
+      "body": "Holds the robot end of the specimen below the force/torque sensor. Because it sits after the sensor, its weight is part of the tool load that gravity compensation has to remove.",
+      "labNote": "Gripper type and clamping method: to be confirmed by the lab.",
+      "section": "tool",
+      "mission": "m1",
+      "missionLabel": "Commission the cell (tool setup)"
+    },
+    "HS_Specimen_Shaft": {
+      "title": "Specimen shaft",
+      "body": "The test article held between the gripper and the fixture pot. While it is seated in the fixture, the sensor reads contact forces as well as the tool's weight, so the specimen must be withdrawn before zeroing. For a dry run it is removed or replaced by a dummy.",
+      "labNote": "Specimen type and material: to be confirmed by the lab. No HS_Specimen_Shaft node in the model: this marker is placed from the part's bounding box.",
+      "section": "tool",
+      "derive": {
+        "part": "Specimen_Shaft",
+        "at": "centre",
+        "offset": [
+          0.05,
+          0,
+          0
+        ]
+      },
+      "mission": "m3",
+      "missionLabel": "Plan and verify a dry run"
+    },
+    "HS_Fixture": {
+      "title": "Test fixture",
+      "body": "A rigid aluminium pot bolted to a T-slot baseplate. The specimen's lower end is clamped here while the robot moves or loads the upper end. The T-slot plate lets the fixture be repositioned and bolted down for different test set-ups.",
+      "labNote": "Specimen type and test protocol: to be confirmed by the lab.",
+      "section": "fixture",
+      "mission": "m3",
+      "missionLabel": "Plan and verify a dry run"
+    },
+    "HS_Controller": {
+      "title": "Robot controller",
+      "body": "The cabinet houses the robot's control computer, the servo drives that power each axis motor, and the safety circuits (emergency stop and safeguarding inputs). The rotary main switch on the door isolates the supply. The laptop on top is typically used for test software or data logging.",
+      "labNote": "Controller generation and the laptop's role in this cell: to be confirmed by the lab.",
+      "section": "controller",
+      "mission": "m1",
+      "missionLabel": "Commission the cell"
+    }
+  },
+  "sections": [
+    {
+      "id": "base",
+      "label": "A1 · Base & rotating column",
+      "roots": [
+        "A0_Base",
+        "Plinth_White"
+      ],
+      "exclude": [
+        "A2_Link_Arm"
+      ],
+      "hotspot": "HS_A1_Base",
+      "joint": "A1"
+    },
+    {
+      "id": "A2",
+      "label": "A2 · Shoulder / link arm",
+      "roots": [
+        "A2_Link_Arm"
+      ],
+      "exclude": [
+        "A3_Arm_Housing"
+      ],
+      "hotspot": "HS_A2_Shoulder",
+      "joint": "A2"
+    },
+    {
+      "id": "A3",
+      "label": "A3 · Elbow / arm housing",
+      "roots": [
+        "A3_Arm_Housing"
+      ],
+      "exclude": [
+        "A4_Forearm"
+      ],
+      "hotspot": "HS_A3_Elbow",
+      "joint": "A3"
+    },
+    {
+      "id": "A4",
+      "label": "A4 · Forearm roll",
+      "roots": [
+        "A4_Forearm"
+      ],
+      "exclude": [
+        "A5_Wrist",
+        "Energy_Hose"
+      ],
+      "hotspot": "HS_A4_Forearm",
+      "joint": "A4"
+    },
+    {
+      "id": "A5",
+      "label": "A5 · Wrist bend",
+      "roots": [
+        "A5_Wrist"
+      ],
+      "exclude": [
+        "A6_Flange"
+      ],
+      "hotspot": "HS_A5_Wrist",
+      "joint": "A5"
+    },
+    {
+      "id": "A6",
+      "label": "A6 · Flange roll",
+      "roots": [
+        "A6_Flange"
+      ],
+      "exclude": [
+        "Tool_Stack"
+      ],
+      "hotspot": "HS_A6_Flange",
+      "joint": "A6"
+    },
+    {
+      "id": "tool",
+      "label": "Tool stack · F/T sensor, gripper, shaft",
+      "roots": [
+        "Tool_Stack"
+      ],
+      "exclude": [],
+      "hotspot": "HS_FT_Sensor"
+    },
+    {
+      "id": "hose",
+      "label": "Energy hose",
+      "roots": [
+        "Energy_Hose"
+      ],
+      "exclude": [],
+      "hotspot": "HS_Energy_Hose"
+    },
+    {
+      "id": "fixture",
+      "label": "Fixture & baseplate",
+      "roots": [
+        "Fixture_Baseplate"
+      ],
+      "exclude": [],
+      "hotspot": "HS_Fixture"
+    },
+    {
+      "id": "controller",
+      "label": "Controller cabinet",
+      "roots": [
+        "Controller_Cabinet"
+      ],
+      "exclude": [],
+      "hotspot": "HS_Controller"
+    }
+  ]
+}

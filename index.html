@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Robot Cell Missions</title>
+  <meta name="description" content="Interactive 3D KUKA-style robot test cell with hotspots, inspection tools and hands-on simulation missions: commissioning, F/T sensor calibration and a low-speed dry run. Unofficial educational model; simulation only.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c24a0a'/%3E%3Cpath d='M9 24V14l7-6 7 6' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    try {
+      const t = localStorage.getItem('kuka-viewer-theme');
+      if (t) document.documentElement.dataset.theme = t;
+    } catch (e) { /* storage unavailable */ }
+  </script>
+</head>
+<body data-mode="guided">
+  <a class="skip-link" href="#mission-panel">Skip to missions</a>
+
+  <header class="topbar">
+    <button class="icon-btn only-narrow" id="btn-toggle-left" aria-controls="sidebar" aria-expanded="false" title="Sections and view">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="sr-only">Sections and view options</span>
+    </button>
+    <div class="brand">
+      <h1>Robot Cell Missions</h1>
+      <span class="brand-sub">KR QUANTEC-class arm · interactive model</span>
+    </div>
+    <div class="seg" id="mode-toggle" role="group" aria-label="Difficulty mode">
+      <button type="button" data-mode="guided" aria-pressed="true">Guided</button>
+      <button type="button" data-mode="expert" aria-pressed="false">Expert</button>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn ghost" id="btn-reset-view" title="Reset view (R)">Reset view</button>
+      <button class="icon-btn" id="btn-screenshot" title="Save screenshot">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span class="sr-only">Save screenshot</span>
+      </button>
+      <button class="icon-btn" id="btn-theme" title="Toggle dark / light">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span class="sr-only">Toggle dark or light theme</span>
+      </button>
+      <button class="icon-btn only-narrow" id="btn-toggle-right" aria-controls="mission-panel" aria-expanded="false" title="Missions">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5zM9 9h6M9 13h6M9 17h3"/></svg><span class="sr-only">Missions</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar" id="sidebar" aria-label="Sections and view options">
+      <section class="panel-block">
+        <h2>Camera</h2>
+        <div class="preset-grid" role="group" aria-label="Camera presets">
+          <button class="btn" data-preset="overview">Overview <kbd>1</kbd></button>
+          <button class="btn" data-preset="wrist">Wrist &amp; F/T <kbd>2</kbd></button>
+          <button class="btn" data-preset="base">Base <kbd>3</kbd></button>
+          <button class="btn" data-preset="controller">Controller <kbd>4</kbd></button>
+        </div>
+      </section>
+      <section class="panel-block">
+        <h2>Sections</h2>
+        <p class="hint">Select a part to isolate it and read about it, or click it in the 3D view.</p>
+        <ul class="section-list" id="section-list" role="listbox" aria-label="Robot sections"></ul>
+        <button class="btn ghost small" id="btn-clear-isolate" disabled>Show all parts</button>
+      </section>
+      <section class="panel-block">
+        <h2>View</h2>
+        <label class="range-row" for="explode"><span>Exploded view</span>
+          <input type="range" id="explode" min="0" max="1" step="0.01" value="0"></label>
+        <div class="toggles">
+          <label class="toggle"><input type="checkbox" id="tg-walls"><span>Hide walls &amp; ceiling <kbd>H</kbd></span></label>
+          <label class="toggle"><input type="checkbox" id="tg-hotspots" checked><span>Hotspots</span></label>
+          <label class="toggle"><input type="checkbox" id="tg-wire"><span>Wireframe</span></label>
+          <label class="toggle"><input type="checkbox" id="tg-axes"><span>Joint axes</span></label>
+          <label class="toggle"><input type="checkbox" id="tg-reach"><span>Reach envelope <small>(illustrative)</small></span></label>
+          <label class="toggle"><input type="checkbox" id="tg-grid"><span>Floor grid</span></label>
+          <label class="toggle"><input type="checkbox" id="tg-shadows" checked><span>Ground shadows</span></label>
+        </div>
+      </section>
+    </aside>
+
+    <div class="stage" id="stage">
+      <canvas id="viewport" tabindex="0" aria-label="3D view of the robot cell. Drag to orbit, scroll or pinch to zoom, right-drag or two-finger drag to pan."></canvas>
+      <div id="labels" class="labels-layer"></div>
+      <div class="sim-banner" role="note"><strong>Simulation only,</strong> not connected to hardware.</div>
+
+      <div class="loader" id="loader" role="status" aria-live="polite">
+        <div class="loader-card">
+          <p id="loader-text">Loading model…</p>
+          <div class="progress" aria-hidden="true"><div class="progress-bar" id="loader-bar"></div></div>
+        </div>
+      </div>
+
+      <div class="card info-card" id="info-card" role="dialog" aria-modal="false" aria-labelledby="info-title" hidden>
+        <button class="icon-btn close" id="info-close" title="Close (Esc)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><span class="sr-only">Close</span></button>
+        <h3 id="info-title"></h3>
+        <p id="info-body"></p>
+        <p class="lab-note" id="info-lab" hidden></p>
+        <div class="info-actions">
+          <button class="btn primary small" id="info-focus">Focus</button>
+          <button class="btn ghost small" id="info-isolate">Isolate part</button>
+          <button class="btn ghost small" id="info-mission" hidden></button>
+        </div>
+      </div>
+
+      <div class="card why-panel" id="why-panel" role="dialog" aria-modal="false" aria-labelledby="why-title" hidden>
+        <button class="icon-btn close" id="why-close" title="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><span class="sr-only">Close</span></button>
+        <p class="why-kicker">Why did this happen?</p>
+        <h3 id="why-title"></h3>
+        <p id="why-body"></p>
+        <button class="btn small" id="why-show">Show me the part</button>
+      </div>
+
+      <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    </div>
+
+    <aside class="mission-panel" id="mission-panel" aria-label="Missions" tabindex="-1">
+      <div class="hud" aria-live="polite">
+        <div class="hud-row">
+          <div class="hud-stat"><span class="hud-label">Score</span><span class="hud-val" id="hud-score">–</span><span class="hud-unit">/100</span></div>
+          <div class="hud-stat"><span class="hud-label">Time</span><span class="hud-val mono" id="hud-timer">0:00</span></div>
+          <div class="hud-badges" id="hud-badges" aria-label="Badges"></div>
+        </div>
+        <ol class="hud-progress" id="hud-progress" aria-label="Mission progress"></ol>
+        <p class="hud-step" id="hud-step"></p>
+      </div>
+      <div class="tabs" id="mission-tabs" role="tablist" aria-label="Missions">
+        <button role="tab" data-mission="m1" aria-controls="pane-m1" aria-selected="true">1 · Commission</button>
+        <button role="tab" data-mission="m2" aria-controls="pane-m2" aria-selected="false" tabindex="-1">2 · Calibrate</button>
+        <button role="tab" data-mission="m3" aria-controls="pane-m3" aria-selected="false" tabindex="-1">3 · Dry run</button>
+        <button role="tab" data-mission="bonus" aria-controls="pane-bonus" aria-selected="false" tabindex="-1">Bonus</button>
+      </div>
+      <section class="mission-pane" id="pane-m1" role="tabpanel" aria-label="Mission 1: Commission the cell"></section>
+      <section class="mission-pane" id="pane-m2" role="tabpanel" aria-label="Mission 2: Zero and calibrate" hidden></section>
+      <section class="mission-pane" id="pane-m3" role="tabpanel" aria-label="Mission 3: Dry run" hidden></section>
+      <section class="mission-pane" id="pane-bonus" role="tabpanel" aria-label="Bonus challenges" hidden></section>
+    </aside>
+  </main>
+
+  <dialog class="modal" id="briefing" aria-labelledby="briefing-title">
+    <p class="why-kicker">Briefing</p>
+    <h2 id="briefing-title"></h2>
+    <p id="briefing-goal"></p>
+    <h3>You will configure</h3>
+    <ul id="briefing-config"></ul>
+    <h3>Safety rules</h3>
+    <ul id="briefing-safety"></ul>
+    <div class="modal-actions">
+      <button class="btn ghost" type="button" onclick="this.closest('dialog').close()">Not yet</button>
+      <button class="btn primary" type="button" id="briefing-start">Start mission</button>
+    </div>
+  </dialog>
+
+  <dialog class="modal wide" id="debrief" aria-labelledby="debrief-title">
+    <h2 id="debrief-title">Dry-run debrief</h2>
+    <div id="debrief-body"></div>
+    <div class="modal-actions">
+      <button class="btn" type="button" onclick="document.querySelector('#m3-export').click()">Download JSON</button>
+      <button class="btn primary" type="button" onclick="this.closest('dialog').close()">Close</button>
+    </div>
+  </dialog>
+
+  <div class="webgl-error" id="webgl-error" hidden>
+    <h2>3D view unavailable</h2>
+    <p>This page needs WebGL 2, which your browser or device has turned off or does not support. Try a recent Chrome, Edge, Firefox or Safari with hardware acceleration enabled.</p>
+  </div>
+
+  <footer class="footer">
+    Unofficial educational model. KUKA is a trademark of KUKA AG. Not affiliated with KUKA or Imperial College London. Simulation only; never use for real robot commissioning.
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

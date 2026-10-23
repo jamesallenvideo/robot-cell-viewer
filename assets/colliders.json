@@ -1,0 +1,380 @@
+{
+ "_note": "Illustrative bounding volumes (metres, glTF axes). Capsule endpoints are in the joint node's local frame.",
+ "robot": [
+  {
+   "name": "A1_Column",
+   "node": "A1_Rotating_Column",
+   "joint": "A1",
+   "a": [
+    0.0,
+    0.05,
+    -0.05
+   ],
+   "b": [
+    0.0,
+    0.4,
+    -0.05
+   ],
+   "r": 0.31
+  },
+  {
+   "name": "A1_A2_Housing",
+   "node": "A1_Rotating_Column",
+   "joint": "A1",
+   "a": [
+    -0.38,
+    0.475,
+    -0.35
+   ],
+   "b": [
+    0.17,
+    0.475,
+    -0.35
+   ],
+   "r": 0.23
+  },
+  {
+   "name": "A2_Link_Arm",
+   "node": "A2_Link_Arm",
+   "joint": "A2",
+   "a": [
+    0.27,
+    0.0,
+    -0.0
+   ],
+   "b": [
+    0.27,
+    1.05,
+    -0.0
+   ],
+   "r": 0.19
+  },
+  {
+   "name": "A3_Housing",
+   "node": "A3_Arm_Housing",
+   "joint": "A3",
+   "a": [
+    0.0,
+    0.03,
+    0.22
+   ],
+   "b": [
+    0.0,
+    0.03,
+    -0.16
+   ],
+   "r": 0.2
+  },
+  {
+   "name": "A3_Elbow_Hub",
+   "node": "A3_Arm_Housing",
+   "joint": "A3",
+   "a": [
+    -0.4,
+    0.0,
+    -0.0
+   ],
+   "b": [
+    0.33,
+    0.0,
+    -0.0
+   ],
+   "r": 0.2
+  },
+  {
+   "name": "A3_Wrist_Motors",
+   "node": "A3_Arm_Housing",
+   "joint": "A3",
+   "a": [
+    0.0,
+    0.03,
+    0.49
+   ],
+   "b": [
+    0.0,
+    0.03,
+    0.38
+   ],
+   "r": 0.15
+  },
+  {
+   "name": "A4_Forearm",
+   "node": "A4_Forearm",
+   "joint": "A4",
+   "a": [
+    0.0,
+    0.0,
+    -0.0
+   ],
+   "b": [
+    0.0,
+    0.0,
+    -0.63
+   ],
+   "r": 0.14
+  },
+  {
+   "name": "A4_Yoke",
+   "node": "A4_Forearm",
+   "joint": "A4",
+   "a": [
+    -0.14,
+    0.0,
+    -0.76
+   ],
+   "b": [
+    0.14,
+    0.0,
+    -0.76
+   ],
+   "r": 0.11
+  },
+  {
+   "name": "A5_Wrist",
+   "node": "A5_Wrist",
+   "joint": "A5",
+   "a": [
+    0.0,
+    0.0,
+    -0.0
+   ],
+   "b": [
+    0.0,
+    0.0,
+    -0.2
+   ],
+   "r": 0.1
+  },
+  {
+   "name": "Tool_Upper",
+   "node": "A6_Flange",
+   "joint": "A6",
+   "a": [
+    0.0,
+    0.0,
+    -0.0
+   ],
+   "b": [
+    0.0,
+    0.0,
+    -0.265
+   ],
+   "r": 0.09
+  },
+  {
+   "name": "Specimen_Shaft",
+   "node": "A6_Flange",
+   "joint": "A6",
+   "a": [
+    0.0,
+    0.0,
+    -0.265
+   ],
+   "b": [
+    0.0,
+    0.0,
+    -0.565
+   ],
+   "r": 0.02
+  }
+ ],
+ "environment": [
+  {
+   "name": "Floor_Platform",
+   "type": "plane",
+   "axis": "y",
+   "value": 0.05,
+   "sign": 1
+  },
+  {
+   "name": "Ceiling",
+   "type": "plane",
+   "axis": "y",
+   "value": 2.688,
+   "sign": -1
+  },
+  {
+   "name": "Wall_N",
+   "type": "plane",
+   "axis": "z",
+   "value": 2.0,
+   "sign": -1
+  },
+  {
+   "name": "Wall_S",
+   "type": "plane",
+   "axis": "z",
+   "value": -2.0,
+   "sign": 1
+  },
+  {
+   "name": "Wall_E",
+   "type": "plane",
+   "axis": "x",
+   "value": 2.25,
+   "sign": -1
+  },
+  {
+   "name": "Wall_W",
+   "type": "plane",
+   "axis": "x",
+   "value": -2.25,
+   "sign": 1
+  },
+  {
+   "name": "Plinth",
+   "type": "box",
+   "c": [
+    -0.35,
+    0.275,
+    1.0
+   ],
+   "h": [
+    0.5,
+    0.225,
+    0.5
+   ]
+  },
+  {
+   "name": "A0_Base",
+   "type": "vcyl",
+   "c": [
+    -0.35,
+    0.0,
+    1.0
+   ],
+   "y0": 0.5,
+   "y1": 0.7,
+   "r": 0.42
+  },
+  {
+   "name": "Fixture_Baseplate",
+   "type": "box",
+   "c": [
+    -0.35,
+    0.0725,
+    -0.6
+   ],
+   "h": [
+    0.306,
+    0.0225,
+    0.225
+   ]
+  },
+  {
+   "name": "Fixture_Pot",
+   "type": "pot",
+   "c": [
+    -0.35,
+    0.0,
+    -0.6
+   ],
+   "y0": 0.095,
+   "y1": 0.425,
+   "r": 0.08900000000000001,
+   "flange_r": 0.12,
+   "flange_y1": 0.115,
+   "bore_r": 0.024,
+   "bore_y0": 0.345
+  },
+  {
+   "name": "Controller_Cabinet",
+   "type": "box",
+   "c": [
+    -1.88,
+    0.63,
+    0.15
+   ],
+   "h": [
+    0.37,
+    0.63,
+    0.41
+   ]
+  },
+  {
+   "name": "Fridge",
+   "type": "box",
+   "c": [
+    -1.92,
+    0.88,
+    -1.45
+   ],
+   "h": [
+    0.37,
+    0.88,
+    0.32
+   ]
+  },
+  {
+   "name": "Staubli_Bench",
+   "type": "box",
+   "c": [
+    1.55,
+    0.75,
+    1.62
+   ],
+   "h": [
+    0.63,
+    0.75,
+    0.32
+   ]
+  },
+  {
+   "name": "Distribution_Board",
+   "type": "box",
+   "c": [
+    -1.0,
+    1.35,
+    1.91
+   ],
+   "h": [
+    0.95,
+    0.85,
+    0.09
+   ]
+  }
+ ],
+ "limits_deg": {
+  "A1": [
+   -185,
+   185
+  ],
+  "A2": [
+   -95,
+   60
+  ],
+  "A3": [
+   -160,
+   65
+  ],
+  "A4": [
+   -350,
+   350
+  ],
+  "A5": [
+   -125,
+   125
+  ],
+  "A6": [
+   -350,
+   350
+  ]
+ },
+ "home_deg": {
+  "A1": 0.0,
+  "A2": -34.53971490366601,
+  "A3": -21.100415566262456,
+  "A4": 0.0,
+  "A5": -34.35986953007139,
+  "A6": 0.0
+ },
+ "joint_nodes": {
+  "A1": "A1_Rotating_Column",
+  "A2": "A2_Link_Arm",
+  "A3": "A3_Arm_Housing",
+  "A4": "A4_Forearm",
+  "A5": "A5_Wrist",
+  "A6": "A6_Flange"
+ },
+ "self_check_min_link_gap": 3
+}

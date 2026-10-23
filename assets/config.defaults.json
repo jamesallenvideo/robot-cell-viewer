@@ -1,0 +1,69 @@
+{
+  "_readme": [
+    "Default settings for the viewer and missions. Safe to edit; keep the JSON valid.",
+    "EVERY number here is ILLUSTRATIVE (generic KR-class magnitudes chosen for teaching), not manufacturer data for any real robot or sensor.",
+    "Angles in degrees, lengths in metres unless a key says _mm, masses in kg, forces in N, moments in N·m, speeds in mm/s.",
+    "Joint angles use this model's own zero (upper arm vertical, forearm horizontal), not the KUKA controller convention."
+  ],
+  "joints": {
+    "_note": "Illustrative KR-class values, not manufacturer data. axis = local rotation axis of the joint node in the GLB; sign maps the angle onto that axis (derived from the GLB animation data).",
+    "A1": { "node": "A1_Rotating_Column", "axis": "y", "sign": 1, "min": -185, "max": 185, "maxSpeedDegS": 100 },
+    "A2": { "node": "A2_Link_Arm", "axis": "x", "sign": 1, "min": -95, "max": 60, "maxSpeedDegS": 100 },
+    "A3": { "node": "A3_Arm_Housing", "axis": "x", "sign": 1, "min": -160, "max": 65, "maxSpeedDegS": 100 },
+    "A4": { "node": "A4_Forearm", "axis": "z", "sign": -1, "min": -350, "max": 350, "maxSpeedDegS": 130 },
+    "A5": { "node": "A5_Wrist", "axis": "x", "sign": 1, "min": -125, "max": 125, "maxSpeedDegS": 130 },
+    "A6": { "node": "A6_Flange", "axis": "z", "sign": -1, "min": -350, "max": 350, "maxSpeedDegS": 200 }
+  },
+  "home": { "A1": 0, "A2": -34.54, "A3": -21.1, "A4": 0, "A5": -34.36, "A6": 0 },
+  "tcpNode": "TCP",
+  "sensorNode": "FT_Sensor",
+  "ik": { "maxIterations": 80, "damping": 0.04, "positionTolerance": 0.002, "orientationToleranceDeg": 1.0, "partialTolerance": 0.03, "singularityWarnDeg": 10 },
+  "sensor": {
+    "_note": "Generic simulated 6-axis F/T sensor. Ranges are illustrative.",
+    "rateHz": 100,
+    "rangeN": [500, 500, 1500],
+    "rangeNm": [50, 50, 50],
+    "maxToolMassKg": 10,
+    "bias": [3.2, -1.8, 5.6, 0.12, -0.08, 0.03],
+    "noise": [0.04, 0.04, 0.05, 0.0025, 0.0025, 0.0015],
+    "driftPerS": [0.002, -0.0015, 0.0025, 0.00008, 0.00005, -0.00004],
+    "zeroSamples": 150,
+    "contactLoadN": [4.5, -11.0, 2.0]
+  },
+  "toolPresets": {
+    "_note": "Sensor frame: Z points along the tool, away from the flange; CoM offsets in mm from the sensor's measuring origin. Illustrative values.",
+    "empty": { "label": "Empty flange", "mass": 0.0, "com_mm": [0, 0, 0], "show": { "Gripper_Block": false, "Specimen_Shaft": false } },
+    "gripper": { "label": "Gripper only", "mass": 1.7, "com_mm": [2, -1, 140], "show": { "Gripper_Block": true, "Specimen_Shaft": false } },
+    "gripper_specimen": { "label": "Gripper + specimen", "mass": 2.4, "com_mm": [4, -3, 211], "show": { "Gripper_Block": true, "Specimen_Shaft": true } },
+    "custom": { "label": "Custom", "mass": 2.0, "com_mm": [0, 0, 150], "physical": "gripper_specimen", "show": { "Gripper_Block": true, "Specimen_Shaft": true } }
+  },
+  "mission1": {
+    "defaults": { "preset": "gripper_specimen", "mountingDeg": 0, "mode": "T1", "overridePct": 10, "forceLimitN": 150, "torqueLimitNm": 20, "tcpSpeedLimitMmS": 250 },
+    "reducedSpeedCapMmS": 250,
+    "workspaceBox": { "min": [-0.75, 0.0, -0.95], "max": [0.15, 1.2, -0.25] }
+  },
+  "mission2": {
+    "minPoses": 3,
+    "maxPoses": 6,
+    "conditionGood": 60,
+    "conditionPoor": 400,
+    "torture": { "loadN": 15, "wiggleSeconds": 2.5 },
+    "tolerance": {
+      "guided": { "massKg": 0.10, "com_mm": 10, "forceN": 0.5, "momentNm": 0.05 },
+      "expert": { "massKg": 0.05, "com_mm": 5, "forceN": 0.3, "momentNm": 0.03 }
+    }
+  },
+  "mission3": {
+    "speedLadderPct": [10, 25, 50],
+    "minClearanceMm": 20,
+    "defaultWaypointSpeedMmS": 250,
+    "defaultBlendMm": 0,
+    "surpriseReactionLimitS": { "guided": 2.5, "expert": 1.2 },
+    "estop": { "position": [0.75, 0.0, -1.1], "_note": "Viewer-side prop (not part of the GLB): an E-stop station placed at the cell entrance." }
+  },
+  "scoring": {
+    "_note": "Each mission scores out of 100 from measured criteria; see js/missions.js for the exact formulas.",
+    "overridePenalty": 15,
+    "hintPenalty": 3
+  }
+}

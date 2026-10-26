@@ -17,7 +17,14 @@
   "home": { "A1": 0, "A2": -34.54, "A3": -21.1, "A4": 0, "A5": -34.36, "A6": 0 },
   "tcpNode": "TCP",
   "sensorNode": "FT_Sensor",
-  "ik": { "maxIterations": 80, "damping": 0.04, "positionTolerance": 0.002, "orientationToleranceDeg": 1.0, "partialTolerance": 0.03, "singularityWarnDeg": 10 },
+  "ik": {
+    "maxIterations": 80,
+    "damping": 0.04,
+    "positionTolerance": 0.002,
+    "orientationToleranceDeg": 1.0,
+    "partialTolerance": 0.03,
+    "singularityWarnDeg": 10
+  },
   "sensor": {
     "_note": "Generic simulated 6-axis F/T sensor. Ranges are illustrative.",
     "rateHz": 100,
@@ -26,40 +33,124 @@
     "maxToolMassKg": 10,
     "bias": [3.2, -1.8, 5.6, 0.12, -0.08, 0.03],
     "noise": [0.04, 0.04, 0.05, 0.0025, 0.0025, 0.0015],
-    "driftPerS": [0.002, -0.0015, 0.0025, 0.00008, 0.00005, -0.00004],
+    "driftPerS": [0.002, -0.0015, 0.0025, 8e-05, 5e-05, -4e-05],
     "zeroSamples": 150,
     "contactLoadN": [4.5, -11.0, 2.0]
   },
   "toolPresets": {
     "_note": "Sensor frame: Z points along the tool, away from the flange; CoM offsets in mm from the sensor's measuring origin. Illustrative values.",
-    "empty": { "label": "Empty flange", "mass": 0.0, "com_mm": [0, 0, 0], "show": { "Gripper_Block": false, "Specimen_Shaft": false } },
-    "gripper": { "label": "Gripper only", "mass": 1.7, "com_mm": [2, -1, 140], "show": { "Gripper_Block": true, "Specimen_Shaft": false } },
-    "gripper_specimen": { "label": "Gripper + specimen", "mass": 2.4, "com_mm": [4, -3, 211], "show": { "Gripper_Block": true, "Specimen_Shaft": true } },
-    "custom": { "label": "Custom", "mass": 2.0, "com_mm": [0, 0, 150], "physical": "gripper_specimen", "show": { "Gripper_Block": true, "Specimen_Shaft": true } }
+    "empty": {
+      "label": "Empty flange",
+      "mass": 0.0,
+      "com_mm": [0, 0, 0],
+      "show": {
+        "Gripper_Block": false,
+        "Specimen_Shaft": false
+      }
+    },
+    "gripper": {
+      "label": "Gripper only",
+      "mass": 1.7,
+      "com_mm": [2, -1, 140],
+      "show": {
+        "Gripper_Block": true,
+        "Specimen_Shaft": false
+      }
+    },
+    "gripper_specimen": {
+      "label": "Gripper + specimen",
+      "mass": 2.4,
+      "com_mm": [4, -3, 211],
+      "show": {
+        "Gripper_Block": true,
+        "Specimen_Shaft": true
+      }
+    },
+    "custom": {
+      "label": "Custom",
+      "mass": 2.0,
+      "com_mm": [0, 0, 150],
+      "physical": "gripper_specimen",
+      "show": {
+        "Gripper_Block": true,
+        "Specimen_Shaft": true
+      }
+    }
   },
   "mission1": {
-    "defaults": { "preset": "gripper_specimen", "mountingDeg": 0, "mode": "T1", "overridePct": 10, "forceLimitN": 150, "torqueLimitNm": 20, "tcpSpeedLimitMmS": 250 },
+    "defaults": {
+      "preset": "gripper_specimen",
+      "mountingDeg": 0,
+      "mode": "T1",
+      "overridePct": 10,
+      "forceLimitN": 150,
+      "torqueLimitNm": 20,
+      "tcpSpeedLimitMmS": 250
+    },
     "reducedSpeedCapMmS": 250,
-    "workspaceBox": { "min": [-0.75, 0.0, -0.95], "max": [0.15, 1.2, -0.25] }
+    "workspaceBox": {
+      "min": [-0.75, 0.0, -0.95],
+      "max": [0.15, 1.2, -0.25]
+    }
   },
   "mission2": {
     "minPoses": 3,
     "maxPoses": 6,
     "conditionGood": 60,
     "conditionPoor": 400,
-    "torture": { "loadN": 15, "wiggleSeconds": 2.5 },
+    "torture": {
+      "loadN": 15,
+      "wiggleSeconds": 2.5
+    },
     "tolerance": {
-      "guided": { "massKg": 0.10, "com_mm": 10, "forceN": 0.5, "momentNm": 0.05 },
-      "expert": { "massKg": 0.05, "com_mm": 5, "forceN": 0.3, "momentNm": 0.03 }
+      "guided": {
+        "massKg": 0.1,
+        "com_mm": 10,
+        "forceN": 0.5,
+        "momentNm": 0.05
+      },
+      "expert": {
+        "massKg": 0.05,
+        "com_mm": 5,
+        "forceN": 0.3,
+        "momentNm": 0.03
+      }
+    },
+    "suggestedPoses": {
+      "_note": "Guided helper: joint changes (deg) from the pose where the student starts capturing. Three tilts in different directions are enough to separate mass from centre of mass.",
+      "poses": [
+        { "label": "tool straight down", "A5": 0, "A6": 0 },
+        { "label": "tilted forwards", "A5": 35, "A6": 0 },
+        { "label": "tilted sideways", "A5": 35, "A6": 90 },
+        { "label": "tilted the other way", "A5": -35, "A6": 45 }
+      ]
     }
   },
   "mission3": {
     "speedLadderPct": [10, 25, 50],
     "minClearanceMm": 20,
-    "defaultWaypointSpeedMmS": 250,
+    "defaultWaypointSpeedMmS": 800,
     "defaultBlendMm": 0,
-    "surpriseReactionLimitS": { "guided": 2.5, "expert": 1.2 },
-    "estop": { "position": [0.75, 0.0, -1.1], "_note": "Viewer-side prop (not part of the GLB): an E-stop station placed at the cell entrance." }
+    "surpriseReactionLimitS": {
+      "guided": 2.5,
+      "expert": 1.2
+    },
+    "estop": {
+      "position": [0.75, 0.0, -1.1],
+      "_note": "Viewer-side prop (not part of the GLB): an E-stop station placed at the cell entrance."
+    },
+    "clearStartLiftM": 0.25,
+    "examplePath": {
+      "_note": "Example dry-run path (glTF metres, tool pointing down): approach, hover, sideways, hover, retreat. Chosen so every check is green at 10–25% override.",
+      "points": [
+        [-0.35, 0.62, -0.6],
+        [-0.35, 0.52, -0.6],
+        [-0.1, 0.55, -0.6],
+        [-0.35, 0.52, -0.6],
+        [-0.35, 0.62, -0.6]
+      ]
+    },
+    "amberRunsInGuided": true
   },
   "scoring": {
     "_note": "Each mission scores out of 100 from measured criteria; see js/missions.js for the exact formulas.",

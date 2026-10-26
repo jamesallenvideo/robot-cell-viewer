@@ -166,6 +166,15 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); width
 .hud-progress li.done { background: var(--ok); }
 .hud-progress li.current { background: var(--accent); }
 .hud-step { font-size: 12.5px; color: var(--text-2); margin: 0; min-height: 1.2em; }
+.hud-next { margin-top: 6px; padding: 7px 9px; border-radius: 8px; background: color-mix(in srgb, var(--info) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--info) 45%, transparent); display: flex; gap: 8px; align-items: flex-start; }
+.hud-next p { margin: 0; font-size: 13px; flex: 1; }
+.hud-next-label { font-weight: 700; color: var(--info); text-transform: uppercase; font-size: 11px; letter-spacing: .05em; margin-right: 2px; }
+.hud-next .btn { flex: none; }
+.flash-target { animation: flash-target 1.6s ease-out; border-radius: 8px; }
+@keyframes flash-target { 0%, 40% { box-shadow: 0 0 0 4px var(--info); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.inline-override { display: flex; gap: 6px; width: 100%; margin-top: 4px; }
+.inline-override input { flex: 1; min-width: 0; font: inherit; font-size: 12.5px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); color: var(--text); }
+.tl { flex-wrap: wrap; }
 .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .tabs [role="tab"] { font: inherit; font-size: 13px; font-weight: 600; background: none; border: none; color: var(--text-2); padding: 7px 8px; border-bottom: 2px solid transparent; cursor: pointer; }
 .tabs [aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }

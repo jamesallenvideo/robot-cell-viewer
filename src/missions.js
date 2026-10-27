@@ -58,6 +58,7 @@ export class MissionControl {
       this.missions[this.active].begin();
     });
     $('#why-close').addEventListener('click', () => this.closeWhy());
+    $('#hud-showme').addEventListener('click', () => this.showMe());
     $('#why-show').addEventListener('click', () => {
       if (this.whyHotspot) this.hotspots.focus(this.whyHotspot);
     });
@@ -136,11 +137,32 @@ export class MissionControl {
     $('#hud-progress').replaceChildren(...steps.map((s, i) => el('li', { class: s.done ? 'done' : s.current ? 'current' : '', title: s.label },
       el('span', { class: 'sr-only', text: `Step ${i + 1}: ${s.label}, ${s.done ? 'done' : s.current ? 'current' : 'to do'}` }))));
     $('#hud-step').textContent = steps.find((s) => s.current)?.label ?? (steps.length && steps.every((s) => s.done) ? 'Complete' : '');
+    // plain-language "next step" with a Show me button that points at the control
+    const cur = steps.find((s) => s.current);
+    const allDone = steps.length > 0 && steps.every((s) => s.done);
+    const hint = cur?.hint ?? (allDone ? m.doneHint : null);
+    const target = cur?.hint ? cur.target : m.doneTarget;
+    $('#hud-next').hidden = !hint;
+    if (hint && $('#hud-hint').textContent !== hint) $('#hud-hint').textContent = hint;
+    this.showTarget = target ?? null;
+    $('#hud-showme').hidden = !target;
     const sc = m.score?.();
     $('#hud-score').textContent = sc ? `${Math.round(sc.total)}` : '–';
     $('#hud-score').title = sc ? sc.parts.map((p) => `${p[0]}: ${Math.round(p[1])}`).join('\n') : '';
     const badges = Object.values(this.missions).flatMap((x) => x.badges ?? []);
     $('#hud-badges').replaceChildren(...[...new Set(badges)].map((b) => el('span', { class: 'badge-pill', text: b })));
+  }
+
+  /** Scroll to the control the current step needs and flash it. */
+  showMe() {
+    const t = this.showTarget && document.querySelector(this.showTarget);
+    if (!t) return;
+    t.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    t.classList.remove('flash-target');
+    void t.offsetWidth;
+    t.classList.add('flash-target');
+    const focusable = t.matches('button, input, select') ? t : t.querySelector('button:not(:disabled), input:not(:disabled), select:not(:disabled)');
+    focusable?.focus({ preventScroll: true });
   }
 
   awardBadge(m, name) {
@@ -152,6 +174,8 @@ export class MissionControl {
 
   update(dt) {
     for (const m of Object.values(this.missions)) m.tick?.(dt, m === this.missions[this.active]);
+    const now = performance.now();
+    if (now - (this._hudT ?? 0) > 400) { this._hudT = now; this.renderHud(); }
     const m = this.missions[this.active];
     $('#hud-timer').textContent = m.started && !m.finished ? sec((performance.now() - m.t0) / 1000) : m.finished ? sec(m.elapsed) : '0:00';
   }
@@ -209,6 +233,11 @@ class MissionBase {
   section(title, ...children) {
     return el('section', { class: 'm-step' }, el('h3', { text: title }), ...children);
   }
+
+  /** Give each step box an id (m1-s1, m1-s2, …) so the Next-step guide can point at it. */
+  idSteps() {
+    $$('.m-step', this.pane).forEach((sec, i) => { sec.id = `${this.id}-s${i + 1}`; });
+  }
 }
 
 // ============================================================== Mission 1
@@ -231,9 +260,12 @@ class Mission1 extends MissionBase {
       configure: ['Tool preset, or a custom mass, centre of mass and sensor mounting rotation', 'Operating mode and speed override', 'A workspace box around the fixture', 'Force, torque and TCP-speed limits'],
       safety: ['Commission in manual reduced speed (T1) at a low override.', 'Every limit must be physically meaningful: no zero or out-of-range values.', 'Each safety acknowledgement is ticked on its own, deliberately.'],
     };
+    this.doneHint = 'Mission 1 complete. Open the “2 · Calibrate” tab.';
+    this.doneTarget = '[data-mission="m2"]';
     this._buildMarker();
     this._buildBox();
     this._build();
+    this.idSteps();
     this.apply();
   }
 
@@ -550,12 +582,14 @@ class Mission1 extends MissionBase {
   progress() {
     const s = this.s;
     const checks = this.lastChecks ?? [];
+    // a step is done when none of its checks is red (amber is allowed, as for locking)
+    const ok = (ids) => checks.length > 0 && ids.every((id) => checks.find((c) => c.id === id)?.state !== 'red');
     return [
-      { label: 'Tool setup', done: !!checks.length && ['mass', 'com', 'mount'].every((id) => checks.find((c) => c.id === id)?.state !== 'red') && this.started },
-      { label: 'Mode & override', done: checks.find((c) => c.id === 'mode')?.state === 'green' },
-      { label: 'Workspace box', done: checks.find((c) => c.id === 'box')?.state === 'green' },
-      { label: 'Protective limits', done: ['flim', 'tlim', 'vlim'].every((id) => checks.find((c) => c.id === id)?.state === 'green') },
-      { label: 'Confirm & lock', done: s.locked },
+      { label: 'Tool setup', done: ok(['mass', 'com', 'mount']), target: '#m1-s1', hint: 'In “1 · Tool setup”, choose the tool fitted to the robot. “Gripper + specimen” matches what you can see in the 3D view.' },
+      { label: 'Mode & speed', done: ok(['mode']), target: '#m1-s2', hint: 'Choose “Manual reduced speed (T1)” and set the speed override to about 10%.' },
+      { label: 'Workspace box', done: ok(['box']), target: '#m1-s3', hint: 'The blue box must contain the fixture. Click “Reset box” to put it back.' },
+      { label: 'Protective limits', done: ok(['flim', 'tlim', 'vlim']), target: '#m1-s4', hint: 'A limit is red: none can be 0. Safe values: force 150 N, torque 20 N·m, speed 250 mm/s.' },
+      { label: 'Confirm & lock', done: s.locked, target: '#m1-s6', hint: 'Read each statement and tick all four boxes, then click “Confirm and lock configuration”.' },
     ].map((x, i, arr) => ({ ...x, current: !x.done && arr.slice(0, i).every((y) => y.done) }));
   }
 
@@ -602,7 +636,7 @@ class JogPanel {
     container.append(el('div', { class: 'jog' }, rows),
       el('div', { class: 'btn-row' },
         el('button', { class: 'btn small', type: 'button', text: 'Tool down', onclick: () => this.toolDown() }),
-        el('button', { class: 'btn small', type: 'button', text: 'Up 10 cm', onclick: () => this.moveTcp(new THREE.Vector3(0, 0.1, 0)) }),
+        el('button', { class: 'btn small jog-up', type: 'button', text: 'Up 10 cm', onclick: () => this.moveTcp(new THREE.Vector3(0, 0.1, 0)) }),
         el('button', { class: 'btn small', type: 'button', text: 'Down 2 cm', onclick: () => this.moveTcp(new THREE.Vector3(0, -0.02, 0)) })));
     robot.onChange(() => this.sync());
     this.sync();
@@ -669,8 +703,11 @@ class Mission2 extends MissionBase {
       configure: ['Jog the robot (sliders, Tool down)', 'Diagnose why readings are not zero', 'Hold to zero; capture 3–6 calibration poses', 'Solve, compare with Mission 1, then torture-test'],
       safety: ['Nothing may touch the tool while zeroing or capturing: withdraw the specimen first.', 'Keep the arm still while samples are averaged.', 'Simulated loads only; the robot is not connected to hardware.'],
     };
+    this.doneHint = 'Mission 2 complete. Open the “3 · Dry run” tab.';
+    this.doneTarget = '[data-mission="m3"]';
     this.reset();
     this._build();
+    this.idSteps();
   }
 
   reset() {
@@ -707,17 +744,20 @@ class Mission2 extends MissionBase {
         el('fieldset', { class: 'checklist', id: 'm2-diag' }, el('legend', { class: 'sr-only', text: 'Causes' }),
           ...[['gravity', 'The weight of the tool below the sensor'], ['bias', 'A constant sensor offset (bias)'], ['drift', 'Temperature drift'], ['contact', 'Contact with the fixture']]
             .map(([k, t]) => el('label', {}, el('input', { type: 'checkbox', value: k }), el('span', { text: t })))),
-        el('button', { class: 'btn small', type: 'button', text: 'Check my answer', onclick: () => this.diagnose() }),
+        el('div', { class: 'btn-row' },
+          el('button', { class: 'btn small', type: 'button', text: 'Check my answer', onclick: () => this.diagnose() }),
+          el('button', { class: 'btn ghost small guided-only', type: 'button', id: 'm2-reveal', text: 'Show answer', hidden: true, onclick: () => this.revealDiagnosis() })),
         el('div', { class: 'result', id: 'm2-diag-result' })),
       this.section('3 · Hold to zero',
         el('p', { text: `Hold the button while ${sc.zeroSamples} samples (${(sc.zeroSamples / sc.rateHz).toFixed(1)} s) are averaged. Releasing early or moving the arm ruins the sample.` }),
         el('button', { class: 'btn hold', type: 'button', id: 'm2-zero', disabled: true }, ringSVG(), el('span', { text: 'Hold to zero' })),
+        el('p', { class: 'small', id: 'm2-zero-note', hidden: true, text: 'Zeroing is off while the specimen is in the fixture: click “Up 10 cm” first.' }),
         el('div', { class: 'result', id: 'm2-bias' })),
       this.section('4 · Capture calibration poses',
         el('p', { text: 'Jog to different orientations and capture 3–6 poses. Tilts in different directions are needed to separate mass from centre of mass.' }),
         el('div', { class: 'btn-row' },
           el('button', { class: 'btn', type: 'button', id: 'm2-capture', text: 'Capture pose', disabled: true, onclick: () => this.capture() }),
-          el('button', { class: 'btn ghost small', type: 'button', id: 'm2-example', text: 'Go to example pose', onclick: () => this.examplePose() })),
+          el('button', { class: 'btn small guided-only', type: 'button', id: 'm2-example', text: 'Move to suggested pose 1', onclick: () => this.suggestedPose() })),
         el('div', { class: 'meter', 'aria-label': 'Pose diversity' }, el('span', { class: 'meter-fill', id: 'm2-div' })),
         el('p', { class: 'small', id: 'm2-div-text', text: 'Pose diversity: capture poses to measure it.' }),
         el('ol', { class: 'pose-list', id: 'm2-poses' })),
@@ -875,6 +915,10 @@ class Mission2 extends MissionBase {
     this.gauges.set(shown);
     this.chart.draw();
     $('#m2-contact').hidden = !s.contact;
+    const zb = $('#m2-zero');
+    const zeroOff = !this.diagnosed || (s.contact && !this.hold);
+    if (zb.disabled !== zeroOff) zb.disabled = zeroOff;
+    $('#m2-zero-note').hidden = !(this.diagnosed && s.contact);
     const badge = $('#m2-mode');
     badge.textContent = this.mode;
     badge.className = `badge ${this.mode}`;
@@ -888,13 +932,16 @@ class Mission2 extends MissionBase {
   }
 
   refresh() {
-    $('#m2-zero').disabled = !this.diagnosed;
+    $('#m2-zero').disabled = !this.diagnosed || this.mc.sensor.contact;
     $('#m2-capture').disabled = !this.bias || this.poses.length >= this.mc.cfg.mission2.maxPoses;
     $('#m2-solve').disabled = this.poses.length < this.mc.cfg.mission2.minPoses;
     $('#m2-load').disabled = !this.model;
     $('#m2-wiggle').disabled = !this.model;
     $('#m2-test').disabled = !this.model;
-    $('#m2-example').hidden = this.mc.expert;
+    const sp = this.mc.cfg.mission2.suggestedPoses.poses;
+    const k = this.poses.length % sp.length;
+    $('#m2-example').textContent = `Move to suggested pose ${k + 1} of ${sp.length}`;
+    $('#m2-example').disabled = !this.bias;
     this.mc.renderHud();
   }
 
@@ -903,12 +950,13 @@ class Mission2 extends MissionBase {
     if (!this.started) this.begin();
     const picked = new Set($$('#m2-diag input:checked').map((i) => i.value));
     const s = this.mc.sensor;
-    const truth = new Set(['bias']);
-    if (s.tool.mass > 0) truth.add('gravity');
-    if (s.contact) truth.add('contact');
-    if (s.faults.thermal) truth.add('drift');
+    // must name the main causes (tool weight, sensor offset) and nothing that is absent;
+    // contact (if the specimen is seated) and drift (with a thermal fault) are accepted too
+    const needed = new Set(['bias']);
+    if (s.tool.mass > 0) needed.add('gravity');
+    const truth = new Set([...needed, ...(s.contact ? ['contact'] : []), ...(s.faults.thermal ? ['drift'] : [])]);
     this.diagnoseTries++;
-    const ok = picked.size === truth.size && [...truth].every((t) => picked.has(t));
+    const ok = [...needed].every((t) => picked.has(t)) && [...picked].every((t) => truth.has(t));
     const out = $('#m2-diag-result');
     if (ok) {
       this.diagnosed = true;
@@ -918,9 +966,19 @@ class Mission2 extends MissionBase {
       out.className = 'result fail';
       out.textContent = this.mc.expert ? 'Not quite. Try again.' : `Not quite. Hint: think about what is constant (offset), what depends on orientation (weight), whether anything touches the tool (${s.contact ? 'it does' : 'it doesn\'t'}), and how much can drift in a few seconds.`;
       if (!this.mc.expert) this.hintsUsed++;
+      if (!this.mc.expert && this.diagnoseTries >= 2) $('#m2-reveal').hidden = false;
       this.mc.why({ title: 'Why are the readings not zero?', body: 'An F/T sensor reports everything below it: the tool\'s own weight (which changes direction as the arm moves), a constant electronic offset, slow thermal drift, and any contact. Zeroing removes the offset at one pose only; gravity compensation removes the weight at every pose.', hotspot: 'HS_FT_Sensor' });
     }
     this.refresh();
+  }
+
+  revealDiagnosis() {
+    const s = this.mc.sensor;
+    const needed = ['bias', ...(s.tool.mass > 0 ? ['gravity'] : []), ...(s.contact ? ['contact'] : [])];
+    $$('#m2-diag input').forEach((i) => { i.checked = needed.includes(i.value); });
+    this.hintsUsed++;
+    this.diagnose();
+    $('#m2-reveal').hidden = true;
   }
 
   // ---------------------------------------------------------- hold to zero
@@ -939,10 +997,26 @@ class Mission2 extends MissionBase {
     if (this.hold.samples.length >= this.hold.n) {
       const samples = this.hold.samples.slice(0, this.hold.n);
       this.hold = null;
-      this.bias = samples[0].map((_, i) => samples.reduce((a, s) => a + s[i], 0) / samples.length);
+      const newBias = samples[0].map((_, i) => samples.reduce((a, s) => a + s[i], 0) / samples.length);
+      const oldBias = this.bias;
+      this.bias = newBias;
       this.zeroedWithContact = this.mc.sensor.contact;
-      this.model = null;
-      this.fit = null;
+      if (oldBias && this.poses.length) {
+        // re-zero: keep the captured poses consistent with the new offset
+        const d = oldBias.map((v, i) => v - newBias[i]);
+        this.poses.forEach((p) => { p.F = p.F.map((v, i) => v + d[i]); p.M = p.M.map((v, i) => v + d[i + 3]); });
+      }
+      if (this.fit) {
+        // keep the solved mass and CoM; re-tare the offsets so this pose reads zero after compensation
+        const a = this.mc.sensor.gravityIn(this.mc.state.m1.mountingDeg).toArray();
+        const g = (mdl) => predict({ ...mdl, bF: [0, 0, 0], bM: [0, 0, 0] }, a).map((v) => -v);
+        const gf = g(this.fit);
+        this.fit = { ...this.fit, bF: gf.slice(0, 3), bM: gf.slice(3) };
+        if (this.model) {
+          const gm = g(this.model);
+          this.model = { ...this.model, bF: gm.slice(0, 3), bM: gm.slice(3) };
+        }
+      } else this.model = null;
       this.chart.mark(this.mc.sensor.t, 'zero');
       $('#m2-bias').className = 'result pass';
       $('#m2-bias').textContent = `Stored bias (mean of ${samples.length} samples):\n${CHANNELS.map((c, i) => `${c.key} ${fmt(this.bias[i], i < 3 ? 3 : 4)}`).join('  ')}\n`
@@ -972,7 +1046,7 @@ class Mission2 extends MissionBase {
 
   // ---------------------------------------------------------- capture poses
   async capture() {
-    if (performance.now() - (this.lastMove ?? 0) < 300) {
+    if (performance.now() - (this.lastMove ?? 0) < 150) {
       toast('Wait until the arm is still before capturing.', 'bad');
       return;
     }
@@ -1007,15 +1081,14 @@ class Mission2 extends MissionBase {
         : `Pose diversity: ${c.quality > 0.66 ? 'good' : c.quality > 0.33 ? 'fair' : 'poor'} (condition number ${Math.max(c.condF, c.condM).toFixed(0)}; lower is better).`;
   }
 
-  examplePose() {
-    const ev = this.mc.motion.clips.Calibration_Poses.events.filter((e) => e.type === 'pose');
-    const k = this.poses.length % ev.length;
-    const clip = this.mc.motion.clips.Calibration_Poses;
-    const f = Math.round(((ev[k].start + ev[k].end) / 2) * clip.fps);
-    const angles = Object.fromEntries(JOINTS.map((j) => [j, clip.degrees[j][f]]));
-    this.hintsUsed++;
-    this.mc.robot.setAngles(angles);
-    toast(`Moved to example: ${ev[k].label}`);
+  /** Guided helper: move to the next of a few well-spread tilts (no penalty). */
+  suggestedPose() {
+    const list = this.mc.cfg.mission2.suggestedPoses.poses;
+    const k = this.poses.length % list.length;
+    if (!this.poseRef || this.poses.length === 0) this.poseRef = this.mc.robot.getAngles();
+    const p = list[k];
+    this.mc.robot.setAngles({ ...this.poseRef, A5: this.poseRef.A5 + p.A5, A6: this.poseRef.A6 + p.A6 });
+    toast(`Suggested pose ${k + 1} of ${list.length} (${p.label}). Now click “Capture pose”.`);
   }
 
   // ---------------------------------------------------------- solve
@@ -1160,21 +1233,24 @@ class Mission2 extends MissionBase {
   }
 
   progress() {
+    const minPoses = this.mc.cfg.mission2.minPoses;
+    const seated = this.mc.sensor.contact;
+    const guided = !this.mc.expert;
     return [
-      { label: 'Diagnose', done: this.diagnosed },
-      { label: 'Hold to zero', done: !!this.bias },
-      { label: 'Capture poses', done: this.poses.length >= this.mc.cfg.mission2.minPoses },
-      { label: 'Solve', done: !!this.fit },
-      { label: 'Torture test', done: !!this.torture?.pass },
+      { label: 'Lift clear', done: !seated || !!this.bias, target: '#pane-m2 .jog-up', hint: 'Click “Up 10 cm” (in “1 · Jog the robot”) so the specimen comes out of the fixture. Nothing may touch the tool.' },
+      { label: 'Diagnose', done: this.diagnosed, target: '#m2-s2', hint: 'In “2 · Diagnose”, tick why the readings are not zero, then click “Check my answer”. Tip: the tool has weight, and every sensor has a small built-in offset.' },
+      { label: 'Hold to zero', done: !!this.bias, target: '#m2-zero', hint: 'Press and keep holding “Hold to zero” until the ring is full (about 2 seconds). Don’t move the arm while it fills.' },
+      { label: 'Capture poses', done: this.poses.length >= minPoses, target: '#m2-s4', hint: guided ? `Click “Move to suggested pose”, then “Capture pose”. Repeat until you have ${minPoses} poses (${this.poses.length} so far).` : `Jog the tool to at least ${minPoses} different tilts and capture each one (${this.poses.length} so far).` },
+      { label: 'Solve', done: !!this.fit, target: '#m2-solve', hint: 'Click “Solve least squares” to work out the tool’s mass and centre of mass.' },
+      { label: 'Pass/fail test', done: !!this.torture?.pass, target: '#m2-test', hint: this.torture && !this.torture.pass ? (this.modelSource === 'mission1' ? 'The test failed because it used your Mission 1 values. Click “Accept estimate”, then run the test again.' : (this.torture.zeroErrF > this.mc.tol().forceN || this.torture.zeroErrM > this.mc.tol().momentNm) && !this.mc.expert ? 'The readings have drifted since you zeroed. Hold “Hold to zero” again (nothing touching the tool), then run the test again.' : 'The test failed. Read the “Why?” panel, fix what it says, then run the test again.') : 'Click “Run pass/fail test” and wait a few seconds for the result.' },
     ].map((x, i, arr) => ({ ...x, current: !x.done && arr.slice(0, i).every((y) => y.done) }));
   }
 }
 
 function whyTorture(label, m) {
   if (label.startsWith('Compensated force') || label.startsWith('Compensated moment')) {
-    return m.modelSource === 'mission1'
-      ? 'You are compensating with the Mission 1 values, which do not match the real tool. Try "Accept estimate".'
-      : 'The compensation leaves an orientation-dependent error. Check the poses were captured clear of the fixture and with good diversity, and that the sensor has no fault.';
+    if (m.modelSource === 'mission1') return 'You are compensating with the Mission 1 values, which do not match the real tool. Click "Accept estimate", then run the test again.';
+    return 'A small offset has crept in since you zeroed (sensor readings drift slowly with time and temperature). Make sure nothing touches the tool, press and hold "Hold to zero" again, then run the test again. Your solved mass and centre of mass are kept.';
   }
   if (label.startsWith('Known')) return 'An external load must appear in full on the compensated channels. If it does not, the sensor frame (mounting rotation) or the compensation model is wrong.';
   if (label.startsWith('Mass') || label.startsWith('CoM')) return 'The estimate does not match the real tool. More diverse poses (tilt the tool in two different directions) and capturing only when still improve accuracy.';
@@ -1199,8 +1275,11 @@ class Mission3 extends MissionBase {
     this.toolStatus = 'fitted';
     this.run = null;
     this.protectiveStops = 0;
+    this.doneHint = 'Mission 3 complete. Try again at 25% for a better score, or open the Bonus tab.';
+    this.doneTarget = '#m3-s3';
     this._buildScene();
     this._build();
+    this.idSteps();
     this.renderWaypoints();
   }
 
@@ -1263,9 +1342,10 @@ class Mission3 extends MissionBase {
             el('select', { id: 'm3-tool', 'aria-label': 'Tool status', onchange: () => this.setTool($('#m3-tool').value) },
               el('option', { value: '', text: 'Choose…' }), el('option', { value: 'fitted', text: 'Specimen fitted' }),
               el('option', { value: 'removed', text: 'Specimen removed' }), el('option', { value: 'dummy', text: 'Dummy specimen fitted' }))),
-          el('li', { 'data-pf': 'estop' }, el('span', { class: 'pf-label', text: 'Test the E-stop: click it in the scene, then release it' }),
+          el('li', { 'data-pf': 'estop' }, el('span', { class: 'pf-label', text: 'Test the E-stop: press it, then release it (here, or the red button in the 3D view)' }),
+            el('button', { class: 'btn small estop-btn', type: 'button', id: 'm3-estop-press', text: 'Press E-stop', onclick: () => this.pressEStop('panel') }),
             el('span', { class: 'pf-state', id: 'm3-estop-state', text: 'untested' }),
-            el('button', { class: 'btn small', type: 'button', id: 'm3-estop-find', text: 'Show me', onclick: () => this.showEStop() })),
+            el('button', { class: 'btn ghost small', type: 'button', id: 'm3-estop-find', text: 'Find it in 3D', onclick: () => this.showEStop() })),
           el('li', { 'data-pf': 'mode' }, el('span', { class: 'pf-label', text: 'Operating mode for the run' }),
             el('select', { id: 'm3-mode', 'aria-label': 'Operating mode', onchange: () => this.setMode($('#m3-mode').value) },
               el('option', { value: '', text: 'Choose…' }), el('option', { value: 'T1', text: 'T1 (manual reduced speed)' }), el('option', { value: 'AUT', text: 'Automatic' }))),
@@ -1276,7 +1356,7 @@ class Mission3 extends MissionBase {
         el('div', { class: 'btn-row' },
           el('button', { class: 'btn small', type: 'button', id: 'm3-add', 'aria-pressed': 'false', text: 'Add by clicking in 3D', onclick: () => this.toggleAddMode() }),
           el('button', { class: 'btn small', type: 'button', text: 'Add at TCP', onclick: () => this.addWaypoint(this.mc.robot.tcpPose().pos.clone().add(new THREE.Vector3(0, 0.05, 0))) }),
-          el('button', { class: 'btn ghost small', type: 'button', text: 'Load example path', onclick: () => this.loadExample() }),
+          el('button', { class: 'btn primary small', type: 'button', id: 'm3-load', text: 'Load example path', onclick: () => this.loadExample() }),
           el('button', { class: 'btn ghost small', type: 'button', text: 'Clear', onclick: () => { this.waypoints = []; this.renderWaypoints(); } })),
         this.hint('Click the fixture or floor to drop a waypoint 15 cm above it. Select a waypoint to drag it with the arrows or type exact values. The blue ghost shows the robot pose for the selected waypoint.'),
         el('ol', { class: 'wp-list', id: 'm3-wps' }),
@@ -1328,6 +1408,16 @@ class Mission3 extends MissionBase {
     this.estopGroup.visible = true;
     this.wpGroup.visible = true;
     this.mc.inspector.setExplode(0);
+    // start from a clear pose above the fixture rather than with the specimen seated
+    const r = this.mc.robot;
+    if (!this.run && r.tcpPose().pos.y < POT_TOP_Y + 0.12) {
+      const p = r.tcpPose();
+      const sol = r.ik(p.pos.clone().add(new THREE.Vector3(0, this.mc.cfg.mission3.clearStartLiftM, 0)), new THREE.Vector3(0, -1, 0), r.angles);
+      if (sol.status === 'reached') {
+        r.setAngles(sol.angles);
+        toast('The robot has been moved to a clear start position above the fixture.');
+      }
+    }
     if (!this.preflight.mode) $('#m3-mode').value = '';
     this.onMode();
     this.replan();
@@ -1369,6 +1459,7 @@ class Mission3 extends MissionBase {
       li.className = done ? (this.preflight.skipped.has(k) ? 'skipped' : 'done') : k === cur ? 'current' : 'todo';
       li.querySelectorAll('select, input, button').forEach((i) => { i.disabled = !(k === cur || done) || this.run?.running; });
     }
+    $('#m3-estop-press').textContent = this.preflight.estopPressed ? 'Release E-stop' : 'Press E-stop';
     $('#m3-estop-state').textContent = this.preflight.estopPressed ? 'PRESSED: click it again to release' : this.preflight.estopTested ? 'tested ✓' : this.preflight.skipped.has('estop') ? 'skipped' : 'untested';
     $('#m3-skip').disabled = !cur;
     this.refreshRun();
@@ -1486,13 +1577,15 @@ class Mission3 extends MissionBase {
   }
 
   loadExample() {
-    this.waypoints = this.mc.motion.waypoints.slice(1).map((w) => ({
-      id: Math.random().toString(36).slice(2, 8), pos: new THREE.Vector3(...w.position), tilt: 0, heading: 0,
-      speed: this.mc.cfg.mission3.defaultWaypointSpeedMmS, blend: 0,
+    const c = this.mc.cfg.mission3;
+    this.waypoints = c.examplePath.points.map((p) => ({
+      id: Math.random().toString(36).slice(2, 8), pos: new THREE.Vector3(...p), tilt: 0, heading: 0,
+      speed: c.defaultWaypointSpeedMmS, blend: 0,
     }));
-    this.hintsUsed++;
+    if (this.mc.expert) this.hintsUsed++;
+    this.selected = null;
     this.renderWaypoints();
-    toast('Loaded the example dry-run path (WP2–WP6 of the authored clip).');
+    toast('Example path loaded: approach, hover, move sideways, hover, retreat.');
   }
 
   wpDir(w) {
@@ -1717,8 +1810,8 @@ class Mission3 extends MissionBase {
     // override buttons for non-green checks
     $$('#m3-checks li').forEach((li) => {
       const c = checks.find((x) => x.id === li.dataset.check);
-      if (c && c.state !== 'green' && !c.overridden && !this.run?.running) {
-        li.append(el('button', { class: 'btn ghost small', type: 'button', text: 'Override…', onclick: () => this.overrideCheck(c) }));
+      if (c && !this.checkOk(c) && !this.run?.running) {
+        li.append(el('button', { class: 'btn ghost small', type: 'button', text: 'Override…', onclick: () => this.overrideCheck(c, li) }));
       }
     });
     // highlight joints in violation
@@ -1727,17 +1820,30 @@ class Mission3 extends MissionBase {
     this.refreshRun();
   }
 
-  overrideCheck(c) {
-    const text = window.prompt(`Override "${c.label}"? Type a justification (at least 15 characters). This costs ${this.mc.cfg.scoring.overridePenalty} points.`);
-    if (!text || text.trim().length < 15) {
-      if (text !== null) toast('Justification too short: override not applied.', 'bad');
-      return;
-    }
-    this.overrides.push({ id: c.id, text: text.trim(), at: new Date().toISOString() });
-    this.analyse();
+  /** Inline justification box (replaces a browser prompt). */
+  overrideCheck(c, li) {
+    if (li.querySelector('.inline-override')) return;
+    const input = el('input', { type: 'text', placeholder: 'Why is it safe? (at least 15 characters)', 'aria-label': `Reason for overriding ${c.label}` });
+    const apply = () => {
+      const text = input.value.trim();
+      if (text.length < 15) { toast('Please give a fuller reason (at least 15 characters).', 'bad'); input.focus(); return; }
+      this.overrides.push({ id: c.id, text, at: new Date().toISOString() });
+      this.analyse();
+    };
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') apply(); });
+    li.append(el('div', { class: 'inline-override' }, input, el('button', { class: 'btn small', type: 'button', text: `Override (−${this.mc.cfg.scoring.overridePenalty} points)`, onclick: apply })));
+    input.focus();
+  }
+
+  /** In Guided mode an amber check is a caution, not a blocker; red always blocks. */
+  checkOk(c) {
+    const amberOk = !this.mc.expert && this.mc.cfg.mission3.amberRunsInGuided;
+    return c.state === 'green' || !!c.overridden || (amberOk && c.state === 'amber');
   }
 
   allGreen() { return this.checks?.length && this.checks.every((c) => c.state === 'green' || c.overridden); }
+
+  runnable() { return this.checks?.length && this.checks.every((c) => this.checkOk(c)); }
 
   setLadder(i) {
     if (i > 0 && !this.cleanPasses.has(i - 1)) {
@@ -1759,10 +1865,10 @@ class Mission3 extends MissionBase {
 
   refreshRun() {
     const pfOk = !this.currentPf();
-    const ready = pfOk && this.allGreen() && this.plan && !this.preflight.estopPressed && !this.awaitAck;
+    const ready = pfOk && this.runnable() && this.plan && !this.preflight.estopPressed && !this.awaitAck;
     $('#m3-deadman').disabled = !ready && !this.run?.running;
     if (!this.run?.running && !this.awaitAck) {
-      $('#m3-status').textContent = !pfOk ? 'Finish the pre-flight first.' : this.preflight.estopPressed ? 'E-stop is pressed: release it to run.' : !this.plan ? 'Add waypoints.' : !this.allGreen() ? 'Run is disabled until every check is green (or overridden).' : `Ready at ${this.overridePct()}%. Hold to run.`;
+      $('#m3-status').textContent = !pfOk ? 'Finish the pre-flight first.' : this.preflight.estopPressed ? 'E-stop is pressed: release it to run.' : !this.plan ? 'Add waypoints.' : !this.runnable() ? (this.mc.expert ? 'Run is disabled until every check is green (or overridden).' : 'Run is disabled while a check is red. Click “Why?” next to it.') : `Ready at ${this.overridePct()}%. Press and hold “Hold to run”.`;
       $('#m3-status').className = `status-line ${ready ? 'ok' : ''}`;
     }
   }
@@ -1773,7 +1879,7 @@ class Mission3 extends MissionBase {
     if (!this.started) this.begin();
     this.startAngles = this.mc.robot.getAngles();
     this._replan();
-    if (!this.allGreen()) return null;
+    if (!this.runnable()) return null;
     const surprise = this.mc.expert || $('#m3-surprise').checked || this.preflight.skipped.has('cell');
     this.run = {
       t: 0, running: false, done: false, frames: this.plan.frames, duration: this.plan.duration, trail: 0,
@@ -2037,12 +2143,24 @@ class Mission3 extends MissionBase {
   }
 
   progress() {
+    const pf = this.currentPf();
+    const pfHint = {
+      tool: 'In “1 · Pre-flight”, choose “Specimen removed” in the first box.',
+      estop: 'Click “Press E-stop”, then click it again to release. This proves the emergency stop works.',
+      mode: 'Choose “T1 (manual reduced speed)” in the mode box.',
+      cell: 'Tick “Cell checked clear of people; door closed”.',
+    }[pf];
+    const red = (this.checks ?? []).filter((c) => !this.checkOk(c));
+    const runHint = this.awaitAck ? 'The robot stopped. Click “Acknowledge stop”, release the E-stop if it is pressed, then click “Reset” and run again.'
+      : 'Press and HOLD “Hold to run” (or hold the Space bar) until the bar is full. Let go to pause. If something unexpected appears, press E-STOP.';
     return [
-      { label: 'Pre-flight', done: !this.currentPf() },
-      { label: 'Waypoints', done: this.waypoints.length > 0 && this.waypoints.every((w) => w.status === 'reached') },
-      { label: 'Checks green', done: !!this.allGreen() },
-      { label: 'Run', done: !!this.run?.done },
-      { label: 'Debrief', done: !!this.lastRun && this.finished },
+      { label: 'Pre-flight', done: !pf, target: '#m3-pre', hint: pfHint },
+      { label: 'Waypoints', done: this.waypoints.length > 0 && this.waypoints.every((w) => w.status === 'reached'), target: this.waypoints.length ? '#m3-wps' : '#m3-load',
+        hint: this.waypoints.length ? 'A waypoint is out of reach (shown red). Delete it (✕) or move it closer to the fixture.' : 'Click “Load example path”, or click the fixture in the 3D view to add your own points.' },
+      { label: 'Checks', done: !!this.runnable(), target: '#m3-checks',
+        hint: red.length ? `Fix the ${red[0].state} check “${red[0].label}”: click “Why?” next to it to see how.` : 'Waiting for the checks…' },
+      { label: 'Run', done: !!this.run?.done, target: this.awaitAck ? '#m3-ack-row' : '#m3-deadman', hint: runHint },
+      { label: 'Debrief', done: !!this.lastRun && this.finished, target: '#m3-debrief-btn', hint: 'Read your debrief. Download the report if your tutor asks for it.' },
     ].map((x, i, arr) => ({ ...x, current: !x.done && arr.slice(0, i).every((y) => y.done) }));
   }
 }

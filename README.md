@@ -16,9 +16,10 @@ An interactive 3D model of a laboratory robot test cell built around an orange K
 - **Numbered hotspots:** click one for an explanation; *Focus* flies the camera to it.
 - **View options:** exploded view, hide walls (`H`), wireframe, joint axes and an illustrative reach envelope. `R` resets the view.
 - **Guided / Expert:** Guided gives hints and explanations; Expert has tighter tolerances and random faults.
+- **Next step:** the blue box under the score always says what to do now; *Show me* points at the right button.
 - **Mission 1 (Commission):** set up the tool, mode, workspace box and limits; checks explain every problem; lock to unlock Missions 2 and 3.
-- **Mission 2 (Calibrate):** jog the arm, diagnose the readings, hold to zero, capture poses, solve by least squares, then torture-test.
-- **Mission 3 (Dry run):** pre-flight, your own waypoints, live checks, dead-man's switch (hold the button or Space), E-stop (E key), replay and debrief.
+- **Mission 2 (Calibrate):** lift the tool clear, diagnose the readings, hold to zero, capture suggested poses, solve by least squares, then run the pass/fail test. If it fails on drift, hold to zero again and re-run.
+- **Mission 3 (Dry run):** pre-flight (including an E-stop press/release test), the example path or your own waypoints, live checks (red blocks the run), dead-man's switch (hold the button or Space), E-stop (E key), replay and debrief.
 - **Bonus:** Find the Fault, Hotspot Hunt and Reach Test.
 - **Sharing:** your settings are saved in the address bar; copy the link to share them.
 

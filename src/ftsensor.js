@@ -73,7 +73,7 @@ export class FTSensor {
   sample() {
     const w = this.idealWrench();
     const c = this.cfg;
-    const driftMul = this.faults.thermal ? 25 : 1;
+    const driftMul = this.faults.thermal ? 250 : 1;
     let noiseMul = this.noiseScale * (this.t < this.wiggleUntil ? 18 : 1);
     if (this.faults.looseCable && Math.random() < 0.04) noiseMul *= 40;   // intermittent spikes
     return w.map((v, i) => v + c.bias[i] + c.driftPerS[i] * this.t * driftMul + gauss() * c.noise[i] * noiseMul);
